@@ -1,66 +1,102 @@
-import Image from "next/image";
-import styles from "./page.module.css";
+"use client";
 
-export default function Home() {
+import { useState } from "react";
+
+export default function HomePage() {
+  const [content, setContent] = useState("");
+  const [ttl, setTtl] = useState("");
+  const [maxViews, setMaxViews] = useState("");
+  const [result, setResult] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    setResult(null);
+    setLoading(true);
+
+    const body: any = { content };
+
+    if (ttl) body.ttl_seconds = Number(ttl);
+    if (maxViews) body.max_views = Number(maxViews);
+
+    try {
+      const res = await fetch("/api/pastes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error || "Failed to create paste");
+      } else {
+        setResult(data.url);
+        setContent("");
+        setTtl("");
+        setMaxViews("");
+      }
+    } catch {
+      setError("Network error");
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
-    <div className={styles.page}>
-      <main className={styles.main}>
-        <Image
-          className={styles.logo}
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
+    <main style={{ padding: "2rem", maxWidth: 700 }}>
+      <h1>Pastebin Lite</h1>
+
+      <form onSubmit={handleSubmit}>
+        <textarea
+          required
+          value={content}
+          onChange={(e) => setContent(e.target.value)}
+          rows={10}
+          style={{ width: "100%", marginBottom: "1rem" }}
+          placeholder="Paste your text here..."
         />
-        <div className={styles.intro}>
-          <h1>To get started, edit the page.tsx file.</h1>
-          <p>
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+
+        <div style={{ marginBottom: "1rem" }}>
+          <input
+            type="number"
+            min="1"
+            placeholder="TTL (seconds)"
+            value={ttl}
+            onChange={(e) => setTtl(e.target.value)}
+            style={{ marginRight: "1rem" }}
+          />
+
+          <input
+            type="number"
+            min="1"
+            placeholder="Max views"
+            value={maxViews}
+            onChange={(e) => setMaxViews(e.target.value)}
+          />
         </div>
-        <div className={styles.ctas}>
-          <a
-            className={styles.primary}
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className={styles.logo}
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
+
+        <button disabled={loading}>
+          {loading ? "Creating..." : "Create Paste"}
+        </button>
+      </form>
+
+      {result && (
+        <p style={{ marginTop: "1rem" }}>
+          Shareable URL:{" "}
+          <a href={result} target="_blank">
+            {result}
           </a>
-          <a
-            className={styles.secondary}
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+        </p>
+      )}
+
+      {error && (
+        <p style={{ marginTop: "1rem", color: "red" }}>
+          {error}
+        </p>
+      )}
+    </main>
   );
 }
