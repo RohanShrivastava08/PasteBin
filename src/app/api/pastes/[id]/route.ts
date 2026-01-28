@@ -3,14 +3,12 @@ import { kv } from "@vercel/kv";
 import { getNowMs } from "@/lib/time";
 import type { Paste } from "@/lib/types";
 
-type Params = {
-  params: {
-    id: string;
-  };
-};
-
-export async function GET(_req: Request, { params }: Params) {
-  const key = `paste:${params.id}`;
+export async function GET(
+  _req: Request,
+  context: { params: Promise<{ id: string }> }
+) {
+  const { id } = await context.params;
+  const key = `paste:${id}`;
 
   const paste = (await kv.get<Paste>(key)) ?? null;
 
@@ -23,7 +21,6 @@ export async function GET(_req: Request, { params }: Params) {
 
   const now = await getNowMs();
 
-  // Check TTL
   if (paste.expires_at !== null && now >= paste.expires_at) {
     await kv.del(key);
     return NextResponse.json(
@@ -32,25 +29,16 @@ export async function GET(_req: Request, { params }: Params) {
     );
   }
 
-  // Check view limit BEFORE increment
-  if (
-    paste.max_views !== null &&
-    paste.views >= paste.max_views
-  ) {
+  if (paste.max_views !== null && paste.views >= paste.max_views) {
     return NextResponse.json(
       { error: "View limit exceeded" },
       { status: 404 }
     );
   }
 
-  // Increment views atomically
-  const updated = await kv.hincrby(key, "views", 1);
+  const updatedViews = await kv.hincrby(key, "views", 1);
 
-  // Safety check AFTER increment
-  if (
-    paste.max_views !== null &&
-    updated > paste.max_views
-  ) {
+  if (paste.max_views !== null && updatedViews > paste.max_views) {
     return NextResponse.json(
       { error: "View limit exceeded" },
       { status: 404 }
@@ -60,7 +48,7 @@ export async function GET(_req: Request, { params }: Params) {
   const remaining_views =
     paste.max_views === null
       ? null
-      : Math.max(paste.max_views - updated, 0);
+      : Math.max(paste.max_views - updatedViews, 0);
 
   return NextResponse.json(
     {
