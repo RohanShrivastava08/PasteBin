@@ -1,18 +1,11 @@
 import { NextResponse } from "next/server";
-import { checkKvConnection } from "@/lib/kv";
+import { redis } from "@/lib/redis";
 
 export async function GET() {
-  const kvOk = await checkKvConnection();
-
-  if (!kvOk) {
-    return NextResponse.json(
-      { ok: false },
-      { status: 500 }
-    );
+  try {
+    await redis.ping();
+    return NextResponse.json({ ok: true }, { status: 200 });
+  } catch (err) {
+    return NextResponse.json({ ok: false }, { status: 500 });
   }
-
-  return NextResponse.json(
-    { ok: true },
-    { status: 200 }
-  );
 }
