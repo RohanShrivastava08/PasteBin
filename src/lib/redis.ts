@@ -1,3 +1,16 @@
-import { Redis } from "@upstash/redis";
+import { createClient } from "redis";
 
-export const redis = Redis.fromEnv();
+const redis = createClient({
+  url: process.env.REDIS_URL,
+});
+
+redis.on("error", (err) => {
+  console.error("Redis error", err);
+});
+
+// Ensure single connection in serverless
+if (!redis.isOpen) {
+  await redis.connect();
+}
+
+export default redis;

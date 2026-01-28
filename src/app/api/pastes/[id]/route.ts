@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
-import { redis } from "@/lib/redis";
+import redis from "@/lib/redis";
 import { getNowMs } from "@/lib/time";
-import type { Paste } from "@/lib/types";
 
 export async function GET(
   _req: Request,
@@ -10,10 +9,20 @@ export async function GET(
   const { id } = await context.params;
   const key = `paste:${id}`;
 
-  const paste = (await redis.get<Paste>(key)) ?? null;
-  if (!paste) {
+  const data = await redis.hGetAll(key);
+
+  if (!data || !data.id) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
+
+  const paste = {
+    id: data.id,
+    content: data.content,
+    created_at: Number(data.created_at),
+    expires_at: data.expires_at ? Number(data.expires_at) : null,
+    max_views: data.max_views ? Number(data.max_views) : null,
+    views: Number(data.views),
+  };
 
   const now = await getNowMs();
 
@@ -26,7 +35,7 @@ export async function GET(
     return NextResponse.json({ error: "View limit exceeded" }, { status: 404 });
   }
 
-  const views = await redis.hincrby(key, "views", 1);
+  const views = await redis.hIncrBy(key, "views", 1);
 
   if (paste.max_views !== null && views > paste.max_views) {
     return NextResponse.json({ error: "View limit exceeded" }, { status: 404 });

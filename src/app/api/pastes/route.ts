@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
-import { redis } from "@/lib/redis";
+import redis from "@/lib/redis";
 import { generateId } from "@/lib/id";
 import { getNowMs } from "@/lib/time";
-import type { Paste } from "@/lib/types";
 
 export async function POST(req: Request) {
   let body: any;
@@ -43,16 +42,16 @@ export async function POST(req: Request) {
   }
 
   const id = generateId();
-  const paste: Paste = {
+  const now = await getNowMs();
+
+  await redis.hSet(`paste:${id}`, {
     id,
     content: body.content,
-    created_at: await getNowMs(),
-    expires_at,
-    max_views,
-    views: 0,
-  };
-
-  await redis.set(`paste:${id}`, paste);
+    created_at: String(now),
+    expires_at: expires_at ? String(expires_at) : "",
+    max_views: max_views ? String(max_views) : "",
+    views: "0",
+  });
 
   return NextResponse.json(
     {

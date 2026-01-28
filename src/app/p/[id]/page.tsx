@@ -1,16 +1,22 @@
-import { redis } from "@/lib/redis";
+import redis from "@/lib/redis";
 import { notFound } from "next/navigation";
 import { getNowMs } from "@/lib/time";
-import type { Paste } from "@/lib/types";
 
 export default async function PastePage({
   params,
 }: {
   params: { id: string };
 }) {
-  const paste = (await redis.get<Paste>(`paste:${params.id}`)) ?? null;
+  const data = await redis.hGetAll(`paste:${params.id}`);
 
-  if (!paste) notFound();
+  if (!data || !data.id) notFound();
+
+  const paste = {
+    content: data.content,
+    expires_at: data.expires_at ? Number(data.expires_at) : null,
+    max_views: data.max_views ? Number(data.max_views) : null,
+    views: Number(data.views),
+  };
 
   const now = await getNowMs();
 
