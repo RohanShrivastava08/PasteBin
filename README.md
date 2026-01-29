@@ -1,7 +1,7 @@
 # Pastebin Lite
 
-A backend-focused Pastebin-like web application that allows users to create and share text pastes via unique URLs, with optional expiry based on time or number of views.  
-Designed for correctness, persistence, and automated testability.
+- A backend-focused Pastebin-like web application that allows users to create and share text pastes via unique URLs, with optional expiry based on time or number of views.  
+- Designed for correctness, persistence, and automated testability.
 
 ---
 
@@ -66,103 +66,148 @@ GET /api/healthz
 Response:
 ```json
 { "ok": true }
+```
+
 Create a Paste
+
+```bash
 POST /api/pastes
+```
 Request body:
 
+```json
 {
   "content": "string",
   "ttl_seconds": 60,
   "max_views": 5
 }
+```
+--- 
+
 Rules:
 
-content is required and must be a non-empty string
+- content is required and must be a non-empty string
 
-ttl_seconds and max_views are optional but must be integers ≥ 1
+- ttl_seconds and max_views are optional but must be integers ≥ 1
 
 Response:
 
+```json
 {
   "id": "string",
   "url": "https://your-app.vercel.app/p/<id>"
 }
+```
+
 Fetch a Paste (API)
+
+```bash
 GET /api/pastes/:id
+```
+
 Response:
 
+```json
 {
   "content": "string",
   "remaining_views": 4,
   "expires_at": "2026-01-01T00:00:00.000Z"
 }
+```
 Notes:
 
-Each successful API fetch counts as a view
+- Each successful API fetch counts as a view
 
-Returns 404 if the paste is missing, expired, or view limit exceeded
+- Returns 404 if the paste is missing, expired, or view limit exceeded
 
 View a Paste (HTML)
+
+```bash
 GET /p/:id
-Displays paste content in a minimal, read-only view
+```
 
-Does not increment view count
+- Displays paste content in a minimal, read-only view
 
-Returns 404 if unavailable
+- Does not increment view count
+
+- Returns 404 if unavailable
 
 ⏱ Deterministic Time Support
 To support automated testing, the application allows deterministic expiry checks.
 
 If the environment variable is set:
 
+```json
 TEST_MODE=1
+```
+
 Then the request header:
 
+```json
 x-test-now-ms: <milliseconds since epoch>
+```
+
 is treated as the current time for expiry logic only.
 
 If the header is absent, real system time is used.
 
 💾 Persistence Layer
-Uses Redis for persistent storage
+- Uses Redis for persistent storage
 
-Avoids in-memory state to ensure correctness on serverless platforms
+- Avoids in-memory state to ensure correctness on serverless platforms
 
-Atomic operations are used for view counting to prevent race conditions
+- Atomic operations are used for view counting to prevent race conditions
 
 🚀 Running Locally
 Clone the repository:
 
+```bash
 git clone <repo-url>
 cd pastebin-lite
+```
+
 Install dependencies:
 
+```bash
 npm install
+```
+
 Create a .env.local file:
 
+```bash
 NEXT_PUBLIC_BASE_URL=http://localhost:3000
 REDIS_URL=<your-redis-url>
+```
+
 Start the development server:
 
+```bash
 npm run dev
+```
+
 Open:
 
+```bash
 http://localhost:3000
+```
+
 🧪 Testing Example (curl)
+
+```bash
 curl -X POST https://your-app.vercel.app/api/pastes \
   -H "Content-Type: application/json" \
   -d '{"content":"Hello world","max_views":2}'
+```
+
+
 📌 Notes
-All API responses return JSON
+- All API responses return JSON
 
-Unavailable pastes consistently return HTTP 404
+- Unavailable pastes consistently return HTTP 404
 
-No secrets or credentials are committed
+- No secrets or credentials are committed
 
-Designed to pass automated grading systems
+- Designed to pass automated grading systems
 
 📄 License
 This project was created for evaluation purposes as part of a take-home exercise.
-
-Note:
-This project intentionally prioritizes backend correctness, persistence, and testability over UI design, aligning with real-world production and automated evaluation requirements.
